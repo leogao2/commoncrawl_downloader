@@ -1,10 +1,10 @@
 # commoncrawl_downloader
 
-Sample usage:
+Example usage:
 
 ```
 docker build -t ccdl .
-docker run -e NUM_CORES=8 -v $PWD/output:/app/output -it ccdl 0,1,2,3,4,5,6,7,8,9,10
+docker run -e NUM_CORES=8 -v $PWD/output:/app/output -it ccdl 0,1,2,3,4,5,6,7,8,9
 ```
 
 There are 3679 blocks in total (numbered 0-3678 inclusive). To specify blocks, provide a comma-seperated list of block numbers as the argument (no spaces). 
