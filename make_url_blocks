@@ -1,0 +1,10 @@
+echo Downloading WARC urls
+
+python download_warc_urls.py
+
+# checksum
+echo "1381c9d58a9fd8e6fd3aeef0a754754a9e0e5f9b3e79e238063aa24146353a65  indexes_20200607105929_warc_urls.txt" | sha256sum --check || exit 1
+
+mkdir warc_blocks
+
+split -a 4 -l 1000 --numeric-suffixes indexes_20200607105929_warc_urls.txt warc_blocks/urls_
