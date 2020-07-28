@@ -1,6 +1,7 @@
 import sys
 from tqdm import tqdm
 import multiprocessing as mp
+import warcio
 from warcio.archiveiterator import ArchiveIterator
 import requests
 import traceback
@@ -20,17 +21,21 @@ def urls_of_block(block):
 
 
 def warcurl_to_contents(warc_url):
-    response = requests.get(warc_url.strip(), stream=True)
-    for record in ArchiveIterator(response.raw, arc2warc=True):
-        if record.rec_type == 'response':
-            content = record.content_stream().read()
-            meta = {
-                'warc': warc_url.strip(),
-                'warc_headers': record.rec_headers.headers,
-                'http_response_headers': record.http_headers.headers,
-            }
+    trY:
+        response = requests.get(warc_url.strip(), stream=True)
+        for record in ArchiveIterator(response.raw, arc2warc=True):
+            if record.rec_type == 'response':
+                content = record.content_stream().read()
+                meta = {
+                    'warc': warc_url.strip(),
+                    'warc_headers': record.rec_headers.headers,
+                    'http_response_headers': record.http_headers.headers,
+                }
 
-            yield content, meta
+                yield content, meta
+    except warcio.exceptions.ArchiveLoadFailed:
+        print('WARNING: WARC load failed!')
+        traceback.print_exc()
 
 
 def warcurls_to_contents(warc_urls):
