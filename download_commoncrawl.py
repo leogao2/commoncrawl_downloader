@@ -21,7 +21,7 @@ def urls_of_block(block):
 
 
 def warcurl_to_contents(warc_url):
-    trY:
+    try:
         response = requests.get(warc_url.strip(), stream=True)
         for record in ArchiveIterator(response.raw, arc2warc=True):
             if record.rec_type == 'response':
