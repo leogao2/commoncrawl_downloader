@@ -16,3 +16,9 @@ There are 3679 blocks in total (numbered 0-3678 inclusive). To specify blocks, p
 # Output format
 
 Each block outputs as a ~40GB `.jsonl.zst` file (info: [jsonlines](http://jsonlines.org/), [zstd](https://facebook.github.io/zstd/)). Each json object in the file has a `text` field, containing the webpage, and a `meta` field containing metadata about the language, the WARC headers, and the HTTP response headers.
+
+# Download order
+
+```
+python3 -c 'import random; random.seed(42); x = list(range(3679)); random.shuffle(x); print(",".join(map(str, x)))'
+```
