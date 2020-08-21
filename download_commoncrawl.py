@@ -154,7 +154,7 @@ def html_to_text(args):
                             justext.justext(html, justext.get_stoplist('English')) 
                         if not x.is_boilerplate], meta
         elif mode == 'trafilatura':
-            result = trafilatura.extract(html)
+            result = trafilatura.extract(html, no_fallback=True)
             if result is None:
                 return
             details = langdet.predict(result.replace('\n', ' ')[:2000], k=5)
@@ -194,7 +194,7 @@ if __name__ == '__main__':
         warcurls = urls_of_block(block)
         ars = {}
         
-        rbf = RollingBloomFilter()
+        rbf = RollingBloomFilter(each_capacity=1000000, each_error_rate=0.0001, num_filters=3)
 
 
         skipped_docs_bloom = 0
