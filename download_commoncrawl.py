@@ -235,7 +235,6 @@ if __name__ == '__main__':
                         continue
             
             ars[lang].add_data(text, meta=meta)
-            with open('demo.txt', 'a') as fh: fh.write(text + "<|endoftext|>")
         
         for ar in ars.values(): ar.commit(archive_name=block)
 
