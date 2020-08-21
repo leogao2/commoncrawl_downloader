@@ -154,7 +154,7 @@ def html_to_text(args):
                             justext.justext(html, justext.get_stoplist('English')) 
                         if not x.is_boilerplate], meta
         elif mode == 'trafilatura':
-            result = trafilatura.extract(html, no_fallback=True)
+            result = trafilatura.extract(html)
             if result is None:
                 return
             details = langdet.predict(result.replace('\n', ' ')[:2000], k=5)
@@ -187,7 +187,7 @@ def get_cc_text(warc_urls):
 
 
 compress_chunk_size = 1000
-upper_sigma = 1
+upper_sigma = 0.5
 if __name__ == '__main__':
     for block in blocks_to_download:
         print('Downloading block', block)
@@ -225,6 +225,7 @@ if __name__ == '__main__':
             if len(text.encode('utf-8')) >= compress_chunk_size: 
                 ccr = math.log(chunked_compression_ratio(text.encode('utf-8'), compress_chunk_size))
                 total_ccr_by_lang[lang].append(ccr)
+                total_ccr_by_lang[lang] = total_ccr_by_lang[lang][-10000:]
 
                 if len(total_ccr_by_lang[lang]) > 1:
                     mu = mean(total_ccr_by_lang[lang])
@@ -234,6 +235,7 @@ if __name__ == '__main__':
                         continue
             
             ars[lang].add_data(text, meta=meta)
+            with open('demo.txt', 'a') as fh: fh.write(text + "<|endoftext|>")
         
         for ar in ars.values(): ar.commit(archive_name=block)
 
