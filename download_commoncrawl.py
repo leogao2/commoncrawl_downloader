@@ -187,7 +187,7 @@ def get_cc_text(warc_urls):
 
 
 compress_chunk_size = 1000
-upper_sigma = 0.5
+upper_sigma = 1
 if __name__ == '__main__':
     for block in blocks_to_download:
         print('Downloading block', block)
