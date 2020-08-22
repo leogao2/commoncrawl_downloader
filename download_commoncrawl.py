@@ -170,16 +170,11 @@ if __name__ == '__main__':
 
         for text, meta in get_cc_text(warcurls):
             total_docs += 1
-            if len(text.encode('utf-8')) > compress_chunk_size: total_docs_gt_compress_chunk_size += 1
 
             lang = meta['primary_language']
             if lang not in ars:
                 ars[lang] = lmd.Archive(f'output/{lang}', compression_level=7)
             ct_by_lang[lang] += 1
-
-
-            if len(text.encode('utf-8')) >= compress_chunk_size: 
-                ccr = math.log(chunked_compression_ratio(text.encode('utf-8'), compress_chunk_size))
             
             ars[lang].add_data(text, meta=meta)
         
