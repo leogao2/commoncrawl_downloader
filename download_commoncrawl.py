@@ -50,34 +50,6 @@ def chunked_compression_ratio(text, chksize):
     return mean(res)
 
 
-class RollingBloomFilter:
-    def __init__(self, each_capacity=1000000, each_error_rate=0.0001, num_filters=10):
-        self.filters = collections.deque()
-        self.each_capacity = each_capacity
-        self.each_error_rate = each_error_rate
-        self.num_filters = num_filters
-        self.seen = 0
-    
-    def roll(self):
-        if len(self.filters) == self.num_filters:
-            self.filters.pop()
-        self.filters.appendleft(pybloomfilter.BloomFilter(self.each_capacity, self.each_error_rate))
-
-    def add(self, x):
-        if self.seen % self.each_capacity == 0:
-            self.roll()
-
-        self.filters[0].add(x)
-
-        self.seen += 1
-    
-    def __contains__(self, item):
-        for filter in self.filters:
-            if item in filter:
-                return True
-        return False
-
-
 def urls_of_block(block):
     with open('warc_blocks/urls_' + block.rjust(4, '0')) as fh:
         yield from map(lambda x: "https://commoncrawl.s3.amazonaws.com/" + x, fh)
@@ -130,8 +102,6 @@ def html_to_text(args):
         except (UnicodeDecodeError, LookupError):
             # still cant figure out encoding, give up
             return
-        
-    
     try:
         if mode == 'justext':
             try:
@@ -193,29 +163,15 @@ if __name__ == '__main__':
         print('Downloading block', block)
         warcurls = urls_of_block(block)
         ars = {}
-        
-        rbf = RollingBloomFilter(each_capacity=1000000, each_error_rate=0.0001, num_filters=3)
 
-
-        skipped_docs_bloom = 0
-        skipped_docs_ccr = 0
         total_docs = 0
-        total_docs_gt_compress_chunk_size = 0
-
         ct_by_lang = collections.defaultdict(int)
-        total_ccr_by_lang = collections.defaultdict(list)
 
 
         for text, meta in get_cc_text(warcurls):
             total_docs += 1
             if len(text.encode('utf-8')) > compress_chunk_size: total_docs_gt_compress_chunk_size += 1
 
-            normalized = clean_for_bloom(text)
-            if normalized in rbf: 
-                skipped_docs_bloom += 1
-                continue
-            rbf.add(normalized)
-            
             lang = meta['primary_language']
             if lang not in ars:
                 ars[lang] = lmd.Archive(f'output/{lang}', compression_level=7)
@@ -224,24 +180,11 @@ if __name__ == '__main__':
 
             if len(text.encode('utf-8')) >= compress_chunk_size: 
                 ccr = math.log(chunked_compression_ratio(text.encode('utf-8'), compress_chunk_size))
-                total_ccr_by_lang[lang].append(ccr)
-                total_ccr_by_lang[lang] = total_ccr_by_lang[lang][-10000:]
-
-                if len(total_ccr_by_lang[lang]) > 1:
-                    mu = mean(total_ccr_by_lang[lang])
-                    s = stddev(total_ccr_by_lang[lang])
-                    if ccr > mu + upper_sigma*s:
-                        skipped_docs_ccr += 1
-                        continue
             
             ars[lang].add_data(text, meta=meta)
         
         for ar in ars.values(): ar.commit(archive_name=block)
 
         with open('output/stats_{}.txt'.format(block), 'w') as fh:
-            fh.write('skipped docs (bloom): {}\n'.format(skipped_docs_bloom))
-            fh.write('skipped docs (ccr, {}-sigma): {}\n'.format(upper_sigma, skipped_docs_ccr))
             fh.write('total docs: {}\n'.format(total_docs))
-            fh.write('total docs, length >{}: {}\n'.format(compress_chunk_size, total_docs_gt_compress_chunk_size))
-            fh.write('total ccr by lang: {}\n'.format(total_ccr_by_lang))
             fh.write('totals by lang: {}\n'.format(ct_by_lang))
