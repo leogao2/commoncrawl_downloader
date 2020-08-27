@@ -117,7 +117,7 @@ def html_to_text(args):
                     'primary_language': 'en',
                     'lang_detector': 'pycld2',
                     'lang_detector_extra_info': details,
-                    'extractor': 'justext'
+                    'extractor': 'justext',
                     **meta
                 }
                 return [x.text for x in 
