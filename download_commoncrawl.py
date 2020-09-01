@@ -16,9 +16,11 @@ import pybloomfilter
 import zstd
 import math
 from textwrap import wrap
+import json
+import abc
 
 
-mode = 'trafilatura'
+mode = 'justext'
 
 
 blocks_to_download = sys.argv[1].split(',')
@@ -86,6 +88,7 @@ import lxml
 langdet = fasttext.load_model("lid.176.bin") 
 
 
+# todo: make HtmlExtractor class to seperate justext and trafilatura logic
 def html_to_text(args):
     html, meta = args
     try:
@@ -117,7 +120,7 @@ def html_to_text(args):
                     'primary_language': 'en',
                     'lang_detector': 'pycld2',
                     'lang_detector_extra_info': details,
-                    'extractor': 'justext'
+                    'extractor': 'justext',
                     **meta
                 }
                 return [x.text for x in 
@@ -149,37 +152,60 @@ def html_to_text(args):
         traceback.print_exc()
 
 
-def get_cc_text(warc_urls):
+def get_cc_text(warc_urls, html_to_text):
     pool = mp.Pool(num_threads)
 
     yield from filter(lambda x:x and x[0],
                       pool.imap(html_to_text, warcurls_to_contents(warc_urls)))
 
 
-compress_chunk_size = 1000
-upper_sigma = 1
-if __name__ == '__main__':
-    for block in blocks_to_download:
-        print('Downloading block', block)
-        warcurls = urls_of_block(block)
-        ars = {}
+class Hook(abc.ABC):
+    @abc.abstractmethod
+    def write_doc(self, doc, meta):
+        pass
 
-        total_docs = 0
-        ct_by_lang = collections.defaultdict(int)
+    @abc.abstractmethod
+    def commit_block(self, block):
+        pass
 
 
-        for text, meta in get_cc_text(warcurls):
-            total_docs += 1
+class ArchiveHook(Hook):
+    def __init__(self):
+        self.ars = {}
+        self.total_docs = 0
+        self.ct_by_lang = collections.defaultdict(int)
 
-            lang = meta['primary_language']
-            if lang not in ars:
-                ars[lang] = lmd.Archive(f'output/{lang}', compression_level=7)
-            ct_by_lang[lang] += 1
-            
-            ars[lang].add_data(text, meta=meta)
-        
-        for ar in ars.values(): ar.commit(archive_name=block)
+    def write_doc(self, doc, meta):
+        lang = meta['primary_language']
+        if lang not in self.ars:
+            self.ars[lang] = lmd.Archive(f'output/{lang}', compression_level=7)
+        self.ct_by_lang[lang] += 1
+        self.total_docs += 1
+
+    def commit_block(self, block):
+        for ar in self.ars.values(): ar.commit(archive_name=block)
 
         with open('output/stats_{}.txt'.format(block), 'w') as fh:
-            fh.write('total docs: {}\n'.format(total_docs))
-            fh.write('totals by lang: {}\n'.format(ct_by_lang))
+            fh.write('total docs: {}\n'.format(self.total_docs))
+            fh.write('totals by lang: {}\n'.format(self.ct_by_lang))
+
+        self.ars = {}
+        self.total_docs = 0
+        self.ct_by_lang = collections.defaultdict(int)
+            
+
+
+def download(blocks, html_to_text, keep_doc, hooks):
+    for block in blocks:
+        print('Downloading block', block)
+        warcurls = urls_of_block(block)
+
+        for text, meta in get_cc_text(warcurls, html_to_text):
+            if keep_doc(text):
+                for hook in hooks: hook.write_doc(text, meta)
+        
+        for hook in hooks: hook.commit_block(block)
+
+
+if __name__ == '__main__':
+    download(blocks_to_download, html_to_text, keep_doc, [ArchiveHook()])
