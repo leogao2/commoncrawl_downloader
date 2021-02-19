@@ -206,6 +206,8 @@ def download(blocks, html_to_text, keep_doc, hooks):
         
         for hook in hooks: hook.commit_block(block)
 
+def keep_doc(doc):
+    return True
 
 if __name__ == '__main__':
     download(blocks_to_download, html_to_text, keep_doc, [ArchiveHook()])
