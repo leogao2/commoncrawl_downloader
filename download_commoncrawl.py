@@ -9,13 +9,13 @@ import lm_dataformat as lmd
 import cchardet as chardet
 import unicodedata
 import os
-import fasttext
-import trafilatura
+#import fasttext
+#import trafilatura
 import collections
-import pybloomfilter
+#import pybloomfilter
 import zstd
 import math
-from textwrap import wrap
+# from textwrap import wrap
 import json
 import abc
 
@@ -95,18 +95,18 @@ def warcurls_to_contents(warc_urls, wat=False):
         yield from warcurl_to_contents(url, wat)
 
 
-import pycld2 as cld2
-import justext
-import lxml
+#import pycld2 as cld2
+#import justext
+#import lxml
 
 try:
     from urlparse import urljoin  # Python2
 except ImportError:
     from urllib.parse import urljoin  # Python3
 
-from best_download import download_file
-import fasttext
-download_file('https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin', 'lid.176.bin', '7e69ec5451bc261cc7844e49e4792a85d7f09c06789ec800fc4a44aec362764e')
+# from best_download import download_file
+# import fasttext
+# download_file('https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin', 'lid.176.bin', '7e69ec5451bc261cc7844e49e4792a85d7f09c06789ec800fc4a44aec362764e')
 
 
 # todo: make HtmlExtractor class to seperate justext and trafilatura logic
@@ -128,48 +128,49 @@ def html_to_text(args):
             return
     try:
         if mode == 'justext':
-            try:
-                _,_,details = cld2.detect(html)
-            except:
-                # cld2 doesn't like control characters
-                # https://github.com/mikemccand/chromium-compact-language-detector/issues/22#issuecomment-435904616
-                html_no_ctrl_chars = ''.join([l for l in html if unicodedata.category(l)[0] not in ['C',]])
-                _,_,details = cld2.detect(html_no_ctrl_chars)
+            raise AssertionError('justext not implemented!')
+        #     try:
+        #         _,_,details = cld2.detect(html)
+        #     except:
+        #         # cld2 doesn't like control characters
+        #         # https://github.com/mikemccand/chromium-compact-language-detector/issues/22#issuecomment-435904616
+        #         html_no_ctrl_chars = ''.join([l for l in html if unicodedata.category(l)[0] not in ['C',]])
+        #         _,_,details = cld2.detect(html_no_ctrl_chars)
 
-            if details[0][1] == 'en':
-                meta = {
-                    'primary_language': 'en',
-                    'lang_detector': 'pycld2',
-                    'lang_detector_extra_info': details,
-                    'extractor': 'justext',
-                    **meta
-                }
-                return [x.text for x in 
-                            justext.justext(html, justext.get_stoplist('English')) 
-                        if not x.is_boilerplate], meta
-        elif mode == 'trafilatura':
-            result = trafilatura.extract(html)
-            if result is None:
-                return
-            details = langdet.predict(result.replace('\n', ' ')[:2000], k=5)
+        #     if details[0][1] == 'en':
+        #         meta = {
+        #             'primary_language': 'en',
+        #             'lang_detector': 'pycld2',
+        #             'lang_detector_extra_info': details,
+        #             'extractor': 'justext',
+        #             **meta
+        #         }
+        #         return [x.text for x in 
+        #                     justext.justext(html, justext.get_stoplist('English')) 
+        #                 if not x.is_boilerplate], meta
+        # elif mode == 'trafilatura':
+        #     result = trafilatura.extract(html)
+        #     if result is None:
+        #         return
+        #     details = langdet.predict(result.replace('\n', ' ')[:2000], k=5)
 
-            # turn np array in snd details into a list so json can serialize it
-            a, b = details
-            b = b.tolist()
-            details = a, b
-            meta = {
-                'primary_language': details[0][0].replace('__label__', ''),
-                'lang_detector': 'fasttext',
-                'lang_detector_extra_info': details,
-                'extractor': 'trafilatura',
-                **meta
-            }
-            return result, meta
+        #     # turn np array in snd details into a list so json can serialize it
+        #     a, b = details
+        #     b = b.tolist()
+        #     details = a, b
+        #     meta = {
+        #         'primary_language': details[0][0].replace('__label__', ''),
+        #         'lang_detector': 'fasttext',
+        #         'lang_detector_extra_info': details,
+        #         'extractor': 'trafilatura',
+        #         **meta
+        #     }
+        #     return result, meta
         elif mode == 'cc_imgs':
             try:
                 obs = json.loads(html)['Envelope']['Payload-Metadata']['HTTP-Response-Metadata']['HTML-Metadata']['Links']
                 
-                cc_urls = [ob for ob in obs if ob['url'].startswith('http://creativecommons.org/licenses/')]
+                cc_urls = [ob for ob in obs if 'creativecommons.org' in ob['url']]
                 keep = len(cc_urls) > 0
                 if not keep: return None
 
@@ -184,8 +185,8 @@ def html_to_text(args):
                 return
         else:
             raise AssertionError('unknown mode!')
-    except lxml.etree.ParserError:
-        return
+    #except lxml.etree.ParserError:
+    #    return
     except:
         traceback.print_exc()
 
